@@ -2,133 +2,87 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-
-    <title>Virtual HOTAS</title>
+    <title>Virtual Throttle</title>
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
-      integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
-      crossorigin="anonymous"
     />
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.5.0/nouislider.css"
       rel="stylesheet"
     />
     <style>
+      body {
+        overscroll-behavior-y: contain;
+      }
       .grid-container {
         display: grid;
-
-        grid-template-rows: 1fr 1fr 1fr;
-        grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-
+        grid-template-rows: auto 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr 1fr;
         grid-template-areas:
-          "flaps btn1 btn4 btn3 throttle"
-          "flaps btn2 btn5 btn6 throttle"
-          "flaps reset reset reset throttle";
-
+          "active-pause fullscreen gear-stepper flap-stepper"
+          "airbrake propeller mixture throttle"
+          "airbrake propeller mixture trim";
         gap: 10px;
-        height: calc(100vh - 10px);
+        height: calc(100vh - 20px);
         padding: 10px;
         place-items: stretch;
+        background-color: #333;
+        color: white;
       }
 
-      .item-flaps {
+      .grid-item {
+        background-color: #444;
+        border-radius: 5px;
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
-        background-color: #efefef;
-        grid-area: flaps;
-        flex-direction: column;
-      }
-      .item-throttle {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background-color: #efefef;
-        grid-area: throttle;
-        flex-direction: column;
+        padding: 5px;
       }
 
-      b {
-        text-align: center;
-      }
+      .item-active-pause { grid-area: active-pause; }
+      .item-fullscreen { grid-area: fullscreen; }
+      .item-gear-stepper { grid-area: gear-stepper; background-color: black; }
+      .item-flap-stepper { grid-area: flap-stepper; background-color: white; color: black; }
+      .item-airbrake { grid-area: airbrake; }
+      .item-propeller { grid-area: propeller; }
+      .item-mixture { grid-area: mixture; }
+      .item-throttle { grid-area: throttle; }
+      .item-trim { grid-area: trim; background-color: black; padding: 0; }
 
-      .item-btn1 {
-        grid-area: btn1;
-        justify-self: stretch;
-      }
-      .item-btn2 {
-        grid-area: btn2;
-      }
-      .item-btn3 {
-        grid-area: btn3;
-      }
-      .item-btn4 {
-        grid-area: btn4;
-      }
-      .item-btn5 {
-        grid-area: btn5;
-      }
-      .item-btn6 {
-        grid-area: btn6;
-      }
-      .item-reset {
-        grid-area: reset;
-      }
-      .button {
-        width: 100%;
-        height: 100%;
-        font-size: large;
-      }
+      .button { width: 100%; height: 100%; font-size: small; }
+      .stepper-button { width: 100%; height: 50%; }
+
       .slider-container {
         width: 30px;
-        height: calc(100% - 40px);
-        padding-top: 20px;
-        padding-bottom: 20px;
-      }
-
-      #throttleSlider {
         height: 100%;
-        width: 30px;
-      }
-      #throttleSlider .noUi-handle {
-        position: absolute;
-        height: 50px;
-        width: 80px;
-        right: -27px;
+        margin: 0 auto;
       }
 
-      #throttleSlider .noUi-handle::after {
-        display: none;
-      }
+      .slider { height: calc(100% - 30px); width: 30px; }
+      .slider .noUi-handle { height: 40px; width: 60px; right: -15px; border-radius: 5px; }
+      .slider .noUi-handle::after, .slider .noUi-handle::before { display: none; }
 
-      #throttleSlider .noUi-handle::before {
-        display: none;
-      }
+      #airbrakeSlider .noUi-handle { background: white; }
+      #propellerSlider .noUi-handle { background: blue; }
+      #mixtureSlider .noUi-handle { background: red; }
+      #throttleSlider .noUi-handle { background: black; border: 1px solid white;}
 
-      #flapsSlider {
-        height: 100%;
-        width: 30px;
-      }
-      #flapsSlider .noUi-handle {
-        position: absolute;
-        height: 50px;
-        width: 80px;
-        right: -27px;
-      }
-
-      #flapsSlider .noUi-handle::after {
-        display: none;
-      }
-
-      #flapsSlider .noUi-handle::before {
-        display: none;
-      }
+      /* Trim Wheel Styles */
+      .trim-container { width: 100%; height: 100%; overflow: hidden; position: relative; }
+      #trim-display { font-size: 1.5rem; font-weight: bold; color: white; text-align: center; }
+      .trim-viewport { position: relative; width: 100%; height: calc(100% - 30px); overflow: hidden; cursor: grab; touch-action: none; }
+      .trim-viewport:active { cursor: grabbing; }
+      .trim-ruler { position: absolute; width: 100%; will-change: transform; }
+      .trim-tick { position: absolute; left: 50%; transform: translateX(-50%); width: 20px; height: 1px; background-color: #666; }
+      .trim-tick.major { width: 40px; background-color: #aaa; height: 2px; }
+      .trim-tick-label { position: absolute; left: 65%; transform: translateY(-50%); font-size: 10px; color: #888; }
+      .trim-center-guide { position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: white; z-index: 10; pointer-events: none; }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.5.0/nouislider.min.js"></script>
@@ -136,273 +90,159 @@
   </head>
   <body>
     <div class="grid-container">
-      <div class="item-flaps">
-        <p><b>Flaps</b></p>
-        <div class="slider-container">
-          <div id="flapsSlider"></div>
+      <div class="grid-item item-active-pause">
+        <button class="btn btn-primary button" onpointerdown="buttonPress(5)" onpointerup="buttonRelease(5)">Active Pause</button>
+      </div>
+      <div class="grid-item item-fullscreen">
+        <button class="btn btn-secondary button" onpointerdown="toggleFullscreen()">Full Screen</button>
+      </div>
+      <div class="grid-item item-gear-stepper">
+        <div>GEAR</div>
+        <button class="btn btn-dark stepper-button" onpointerdown="buttonPress(1)" onpointerup="buttonRelease(1)">UP</button>
+        <button class="btn btn-dark stepper-button" onpointerdown="buttonPress(2)" onpointerup="buttonRelease(2)">DOWN</button>
+      </div>
+      <div class="grid-item item-flap-stepper">
+        <div>FLAP</div>
+        <button class="btn btn-light stepper-button" onpointerdown="buttonPress(3)" onpointerup="buttonRelease(3)">UP</button>
+        <button class="btn btn-light stepper-button" onpointerdown="buttonPress(4)" onpointerup="buttonRelease(4)">DOWN</button>
+      </div>
+
+      <div class="grid-item item-airbrake"><p>Airbrake</p><div class="slider-container"><div id="airbrakeSlider" class="slider"></div></div></div>
+      <div class="grid-item item-propeller"><p>Propeller</p><div class="slider-container"><div id="propellerSlider" class="slider"></div></div></div>
+      <div class="grid-item item-mixture"><p>Mixture</p><div class="slider-container"><div id="mixtureSlider" class="slider"></div></div></div>
+      <div class="grid-item item-throttle"><p>Throttle</p><div class="slider-container"><div id="throttleSlider" class="slider"></div></div></div>
+      
+      <div class="grid-item item-trim">
+        <div id="trim-display">0%</div>
+        <div class="trim-container">
+          <div class="trim-viewport" id="trimViewport">
+            <div class="trim-center-guide"></div>
+            <div class="trim-ruler" id="trimRuler"></div>
+          </div>
         </div>
       </div>
-      <div class="item-throttle">
-        <p><b>Throttle</b></p>
-        <div class="slider-container">
-          <div id="throttleSlider"></div>
-        </div>
-      </div>
-      <button class="item-btn1 btn btn-primary button" onpointerdown="buttonPress(21)" onpointerup="buttonRelease(21)">Gear Up</button>
-      <button class="item-btn2 btn btn-primary button" onpointerdown="buttonPress(22)" onpointerup="buttonRelease(22)">Gear Down</button>
-      <button class="item-btn3 btn btn-primary button" onpointerdown="buttonPress(23)" onpointerup="buttonRelease(23)">
-        Prkng Brk Toggle
-      </button>
-      <button class="item-btn4 btn btn-primary button" onpointerdown="buttonPress(24)" onpointerup="buttonRelease(24)">
-        Cycle Camera
-      </button>
-      <button class="item-btn5 btn btn-primary button" onpointerdown="buttonPress(25)" onpointerup="buttonRelease(25)">
-        Active Pause
-      </button>
-      <button class="item-btn6 btn btn-primary button" onpointerdown="toggleFullscreen()">
-        Full Screen
-      </button>
-      <button class="item-reset btn btn-primary button" onpointerdown="homeOrientation()">
-        Reset Rotation
-        <p id="orientation">
-          <output id="pitch"></output>° <output id="roll"></output>° <output id="yaw"></output>°
-        </p>
-        <!-- <div id="axisinfo">axis</div> -->
-        <p id="status"></p>
-        <!-- <div id="gamepad-info"></div> -->
-      </button>
     </div>
 
     <script>
-      // Initialize the socket
       const socket = io.connect("http://" + document.domain + ":" + location.port);
 
-      // Initialize default values
-      let buttonValuesInit = Array(31).fill(0);
-      let orientationInit = Array(5).fill(0);
-      let gamepadAttached = false;
-
-      /**
-       * Compare arrays
-       * Used to check if values have changed from the initialized values
-       */
-      const compareArrays = (a, b) =>
-        a.length === b.length && a.every((element, index) => element === b[index]);
-
-      /**
-       * If gamepad is connected socket.emit status and hide orientation values in UI
-       */
-      window.addEventListener("gamepadconnected", (event) => {
-        const gp = event.gamepad;
-        document.getElementById("status").innerText = `🎮 Gamepad connected 🎮`;
-        // document.getElementById("status").innerText = `Gamepad connected: ${gp.id}`;
-        gamepadAttached = true;
-        updateStatus();
-        socket.emit("gamepadConnection", {
-          connected: true,
+      function createSlider(id, color, axisName) {
+        const slider = document.getElementById(id);
+        noUiSlider.create(slider, {
+          start: 0,
+          orientation: "vertical",
+          direction: "rtl",
+          range: { min: 0, max: 32700 },
         });
-        document.getElementById("orientation").style.visibility = "hidden";
-      });
-
-      /**
-       * If gamepad is disconnected socket.emit status show hide orientation values in UI
-       */
-      window.addEventListener("gamepaddisconnected", (event) => {
-        document.getElementById("status").innerText = "";
-        // document.getElementById("status").innerText = "Gamepad disconnected.";
-        gamepadAttached = false;
-        socket.emit("gamepadConnection", {
-          connected: false,
+        slider.noUiSlider.on("update", function (values, handle) {
+          socket.emit("update_joystick_axis", {
+            axis: axisName,
+            value: Number(values[handle]),
+          });
         });
-        document.getElementById("orientation").style.visibility = "visible";
-      });
-
+      }
+      
       document.addEventListener("DOMContentLoaded", function () {
-        /**
-         * Make the vertical slider for Throttle
-         */
-        const verticalSlider_throttle = document.getElementById("throttleSlider");
-
-        noUiSlider.create(verticalSlider_throttle, {
-          start: 40,
-          orientation: "vertical",
-          connect: "lower",
-          direction: "rtl",
-          tooltips: {
-            to: function (value) {
-              return Math.round((value / 32700) * 100);
-            },
-          },
-          range: {
-            min: 0,
-            max: 32700,
-          },
-        });
-        verticalSlider_throttle.noUiSlider.on("update", function (values, handle, unencoded) {
-          socket.emit("update_joystick_throttle", {
-            joystick_value: Number(values[handle]),
-          });
-        });
-
-        /**
-         * Make the vertical slider for Flaps
-         */
-        const verticalSlider_flaps = document.getElementById("flapsSlider");
-
-        noUiSlider.create(verticalSlider_flaps, {
-          start: 40,
-          orientation: "vertical",
-          connect: "lower",
-          direction: "rtl",
-          tooltips: {
-            to: function (value) {
-              return Math.round((value / 32700) * 100);
-            },
-          },
-          range: {
-            min: 0,
-            max: 32700,
-          },
-        });
-        verticalSlider_flaps.noUiSlider.on("update", function (values, handle, unencoded) {
-          socket.emit("update_joystick_flaps", {
-            flaps_value: Number(values[handle]),
-          });
-        });
+        createSlider("airbrakeSlider", "white", "x");
+        createSlider("propellerSlider", "blue", "y");
+        createSlider("mixtureSlider", "red", "z");
+        createSlider("throttleSlider", "black", "slider1");
+        initTrimWheel();
       });
 
-      /**
-       * If browser supports motion sensors and gamepad is not attached then socket.emit the orientation data.
-       */
-      if (window.DeviceOrientationEvent && !gamepadAttached) {
-        let once = false;
-        let throttleTimeout;
-
-        window.addEventListener("deviceorientationabsolute", function (event) {
-          if (!once) {
-            let data = {
-              yaw: event.alpha,
-              pitch: event.beta,
-              roll: event.gamma,
-            };
-            socket.emit("orientationPhone", data);
-            once = true;
-
-            throttleTimeout = setTimeout(function () {
-              once = false;
-            }, 50);
-          }
-        });
-      } else {
-        alert("Device does not support DeviceOrientationEvent");
-      }
-
-      /**
-       * Logic to get the button and axes data from the gamepad.
-       */
-      function updateStatus() {
-        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-
-        for (let i = 0; i < gamepads.length; i++) {
-          const gp = gamepads[i];
-          if (gp) {
-            const buttonValues = gp.buttons.map((button) => parseInt(button.value));
-            if (compareArrays(buttonValues, buttonValuesInit)) {
-            } else {
-              gamepadButton(buttonValues);
-              buttonValuesInit = buttonValues;
-            }
-            // document.getElementById("axisinfo").innerText = buttonValues;
-            let data = {
-              yaw: -gp.buttons[6].value + gp.buttons[7].value,
-              pitch: gp.axes[1],
-              roll: gp.axes[0],
-              headYaw: gp.axes[2],
-              headPitch: gp.axes[3],
-            };
-            if (compareArrays(Object.values(data), orientationInit)) {
-            } else {
-              orientationInit = Object.values(data);
-              socket.emit("orientation", data);
-            }
-            // document.getElementById("axisinfo").innerText += orientationInit;
-          }
-        }
-        requestAnimationFrame(updateStatus);
-      }
-
-      /**
-       * Get the current orientation and set it as home position.
-       */
-      function homeOrientation() {
-        if (window.DeviceOrientationEvent) {
-          let once = false;
-
-          window.addEventListener("deviceorientationabsolute", function (event) {
-            if (!once) {
-              let data = {
-                yaw: event.alpha,
-                pitch: event.beta,
-                roll: event.gamma,
-              };
-              socket.emit("orientationHOME", data);
-              once = true;
-            }
-          });
-        } else {
-          alert("Device does not support DeviceOrientationEvent");
-        }
-      }
-
-      /**
-       * Handle button presses from the UI
-       */
-      function buttonPress(data) {
-        socket.emit("button_press", {
-          button: data,
-        });
-      }
- 
-      /**
-       * Handle button release from the UI
-       */
-      function buttonRelease(data) {
-        socket.emit("button_release", {
-          button: data,
-        });
-      }
-
-      /**
-       * Handle button presses on the gamepad
-       */
-      function gamepadButton(data) {
-        socket.emit("gamepadButton", {
-          gamepadButtonData: data,
-        });
-      }
-
-      /**
-       * Event listener for joystick update acknowledgement
-       */
-      socket.on("orientation_updated", function (data) {
-        console.log(data);
-        let pitch_label = document.getElementById("pitch");
-        pitch_label.textContent = Math.round(data.pitch);
-        let roll_label = document.getElementById("roll");
-        roll_label.textContent = Math.round(data.roll);
-        let yaw_label = document.getElementById("yaw");
-        yaw_label.textContent = Math.round(data.yaw);
-      });
-
-      /**
-       * Toggle full screen
-       */
+      function buttonPress(data) { socket.emit("button_press", { button: data }); }
+      function buttonRelease(data) { socket.emit("button_release", { button: data }); }
       function toggleFullscreen() {
-        if (document.fullscreenElement) {
-          document.exitFullscreen().catch((err) => console.log(err));
-        } else {
-          document.documentElement.requestFullscreen().catch((err) => console.log(err));
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen();
+      }
+
+      // Trim Wheel Logic (adapted from scroller.html)
+      function initTrimWheel() {
+        const viewport = document.getElementById('trimViewport');
+        const ruler = document.getElementById('trimRuler');
+        const display = document.getElementById('trim-display');
+
+        const MIN = -100;
+        const MAX = 100;
+        const PX_PER_UNIT = 20; 
+        const FRICTION = 0.95;
+
+        let currentY = -((MAX - MIN) / 2) * PX_PER_UNIT; 
+        let isDragging = false;
+        let lastY = 0;
+        let velocity = 0;
+        let rafId = null;
+
+        for (let i = MIN; i <= MAX; i++) {
+            const yPos = (MAX - i) * PX_PER_UNIT;
+            const tick = document.createElement('div');
+            tick.className = `trim-tick ${i % 10 === 0 ? 'major' : ''}`;
+            tick.style.top = `${yPos}px`;
+            ruler.appendChild(tick);
+            if (i % 20 === 0) {
+                const label = document.createElement('div');
+                label.className = 'trim-tick-label';
+                label.style.top = `${yPos}px`;
+                label.innerText = i + "%";
+                ruler.appendChild(label);
+            }
         }
+
+        function updateTrim() {
+            const viewportCenter = viewport.offsetHeight / 2;
+            const relativePos = viewportCenter - currentY;
+            let value = MAX - (relativePos / PX_PER_UNIT);
+            value = Math.max(MIN, Math.min(MAX, value));
+            
+            display.innerText = `${Math.round(value)}%`;
+            ruler.style.transform = `translateY(${currentY}px)`;
+            
+            // Convert -100..100 to 0..32700 for vJoy
+            const vjoyValue = ((value - MIN) / (MAX - MIN)) * 32700;
+            socket.emit("update_joystick_axis", { axis: "slider2", value: vjoyValue });
+        }
+
+        function applyInertia() {
+            if (isDragging) return;
+            velocity *= FRICTION;
+            currentY += velocity;
+
+            const minScroll = (viewport.offsetHeight / 2) - ((MAX - MIN) * PX_PER_UNIT);
+            const maxScroll = viewport.offsetHeight / 2;
+            if (currentY > maxScroll) { currentY = maxScroll; velocity = 0; }
+            if (currentY < minScroll) { currentY = minScroll; velocity = 0; }
+            
+            updateTrim();
+
+            if (Math.abs(velocity) > 0.05) {
+                rafId = requestAnimationFrame(applyInertia);
+            }
+        }
+        
+        viewport.addEventListener('pointerdown', e => {
+            isDragging = true;
+            velocity = 0;
+            lastY = e.clientY;
+            cancelAnimationFrame(rafId);
+        });
+
+        window.addEventListener('pointermove', e => {
+            if (!isDragging) return;
+            const deltaY = e.clientY - lastY;
+            velocity = deltaY;
+            currentY += deltaY;
+            lastY = e.clientY;
+            updateTrim();
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            rafId = requestAnimationFrame(applyInertia);
+        });
+
+        updateTrim();
       }
     </script>
   </body>
