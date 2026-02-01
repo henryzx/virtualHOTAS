@@ -48,7 +48,7 @@
       .item-active-pause { grid-area: active-pause; }
       .item-fullscreen { grid-area: fullscreen; }
       .item-gear-stepper { grid-area: gear-stepper; background-color: black; }
-      .item-flap-stepper { grid-area: flap-stepper; background-color: white; color: black; }
+      .item-flap-stepper { grid-area: flap-stepper; background-color: black; }
       .item-airbrake { grid-area: airbrake; }
       .item-propeller { grid-area: propeller; }
       .item-mixture { grid-area: mixture; }
@@ -83,6 +83,49 @@
       .trim-tick.major { width: 40px; background-color: #aaa; height: 2px; }
       .trim-tick-label { position: absolute; left: 65%; transform: translateY(-50%); font-size: 10px; color: #888; }
       .trim-center-guide { position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: white; z-index: 10; pointer-events: none; }
+
+      /* Toggle Switch Styles */
+      .toggle-switch-container {
+        width: 60px; /* Increased width for better touch interaction */
+        height: 120px; /* Increased height */
+        background-color: #222; /* Darker background */
+        border-radius: 30px; /* More pronounced rounding */
+        position: relative;
+        cursor: pointer;
+        border: 2px solid #555; /* Added a border */
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.5); /* Inner shadow for depth */
+      }
+
+      .toggle-switch {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 10px;
+        height: 80%; /* Taller track */
+        background-color: #111; /* Very dark track */
+        border-radius: 5px;
+      }
+
+      .toggle-switch-handle {
+        width: 50px; /* Wider handle */
+        height: 40px; /* Taller handle */
+        background: linear-gradient(145deg, #555, #333); /* Gradient for 3D effect */
+        border-radius: 10px; /* Less rounded corners */
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: calc(50% - 20px); /* Centered initial position */
+        cursor: grab;
+        border: 1px solid #666;
+        box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+        transition: top 0.1s ease-out; /* Faster, smoother transition */
+      }
+
+      .toggle-switch-handle:active {
+        cursor: grabbing;
+        background: linear-gradient(145deg, #444, #222); /* Darken when grabbed */
+      }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.5.0/nouislider.min.js"></script>
@@ -98,13 +141,19 @@
       </div>
       <div class="grid-item item-gear-stepper">
         <div>GEAR</div>
-        <button class="btn btn-dark stepper-button" onpointerdown="buttonPress(1)" onpointerup="buttonRelease(1)">UP</button>
-        <button class="btn btn-dark stepper-button" onpointerdown="buttonPress(2)" onpointerup="buttonRelease(2)">DOWN</button>
+        <div class="toggle-switch-container" id="gear-switch-container">
+          <div class="toggle-switch">
+            <div class="toggle-switch-handle"></div>
+          </div>
+        </div>
       </div>
       <div class="grid-item item-flap-stepper">
         <div>FLAP</div>
-        <button class="btn btn-light stepper-button" onpointerdown="buttonPress(3)" onpointerup="buttonRelease(3)">UP</button>
-        <button class="btn btn-light stepper-button" onpointerdown="buttonPress(4)" onpointerup="buttonRelease(4)">DOWN</button>
+        <div class="toggle-switch-container" id="flap-switch-container">
+          <div class="toggle-switch">
+            <div class="toggle-switch-handle"></div>
+          </div>
+        </div>
       </div>
 
       <div class="grid-item item-airbrake"><p>Airbrake</p><div class="slider-container"><div id="airbrakeSlider" class="slider"></div></div></div>
@@ -142,13 +191,7 @@
         });
       }
       
-      document.addEventListener("DOMContentLoaded", function () {
-        createSlider("airbrakeSlider", "white", "x");
-        createSlider("propellerSlider", "blue", "y");
-        createSlider("mixtureSlider", "red", "z");
-        createSlider("throttleSlider", "black", "slider1");
-        initTrimWheel();
-      });
+
 
       function buttonPress(data) { socket.emit("button_press", { button: data }); }
       function buttonRelease(data) { socket.emit("button_release", { button: data }); }
@@ -244,6 +287,96 @@
 
         updateTrim();
       }
+
+      // Toggle Switch Logic
+      function createToggleSwitch(containerId, upButton, downButton) {
+        const container = document.getElementById(containerId);
+        const handle = container.querySelector(".toggle-switch-handle");
+
+        let isDragging = false;
+        let startY = 0;
+        let startTop = 0;
+
+        const handleHeight = handle.offsetHeight;
+        const containerHeight = container.offsetHeight;
+        const centerPos = (containerHeight / 2) - (handleHeight / 2);
+        const maxUp = 10;
+        const maxDown = containerHeight - handleHeight - 10;
+
+        // Initialize handle position
+        handle.style.top = `${centerPos}px`;
+
+        const onPointerDown = (e) => {
+          if (e.target === handle) {
+            isDragging = true;
+            startY = e.clientY;
+            startTop = handle.offsetTop;
+            handle.style.transition = 'none'; // Disable transition while dragging
+            container.setPointerCapture(e.pointerId);
+          }
+        };
+
+        const onPointerMove = (e) => {
+          if (!isDragging) return;
+          const deltaY = e.clientY - startY;
+          let newTop = startTop + deltaY;
+
+          // Clamp the position within the defined limits
+          newTop = Math.max(maxUp, Math.min(newTop, maxDown));
+          handle.style.top = `${newTop}px`;
+        };
+
+        const onPointerUp = (e) => {
+          if (!isDragging) return;
+          isDragging = false;
+          container.releasePointerCapture(e.pointerId);
+          handle.style.transition = 'top 0.2s ease-out'; // Re-enable for snap back
+
+          const currentTop = handle.offsetTop;
+          const upperThreshold = centerPos - 20;
+          const lowerThreshold = centerPos + 20;
+
+          if (currentTop < upperThreshold) {
+            // Trigger UP action
+            console.log('Trigger UP');
+            buttonPress(upButton);
+            setTimeout(() => buttonRelease(upButton), 150);
+            // Animate snap back to center
+            handle.style.top = `${maxUp}px`;
+            setTimeout(() => {
+                handle.style.top = `${centerPos}px`;
+            }, 100);
+          } else if (currentTop > lowerThreshold) {
+            // Trigger DOWN action
+            console.log('Trigger DOWN');
+            buttonPress(downButton);
+            setTimeout(() => buttonRelease(downButton), 150);
+            // Animate snap back to center
+            handle.style.top = `${maxDown}px`;
+             setTimeout(() => {
+                handle.style.top = `${centerPos}px`;
+            }, 100);
+          } else {
+            // Reset to center if not moved far enough
+            handle.style.top = `${centerPos}px`;
+          }
+        };
+        
+        container.addEventListener('pointerdown', onPointerDown);
+        container.addEventListener('pointermove', onPointerMove);
+        container.addEventListener('pointerup', onPointerUp);
+        container.addEventListener('pointercancel', onPointerUp); // Handle cases like pointer leaving the screen
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        createSlider("airbrakeSlider", "white", "x");
+        createSlider("propellerSlider", "blue", "y");
+        createSlider("mixtureSlider", "red", "z");
+        createSlider("throttleSlider", "black", "slider1");
+        initTrimWheel();
+        createToggleSwitch("gear-switch-container", 1, 2);
+        createToggleSwitch("flap-switch-container", 3, 4);
+      });
     </script>
   </body>
 </html>
