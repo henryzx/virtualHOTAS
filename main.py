@@ -14,7 +14,7 @@ socketio = SocketIO(app,debug=True)
 
 gamepadStatus = False
 
-buttonState =  ['0']*8
+buttonState =  ['0']*16
 
 
 '''
@@ -25,7 +25,7 @@ virtual_joystick = VJoyDevice(1)
 virtual_joystick.data.wAxisX = 16383
 virtual_joystick.data.wAxisY = 16383
 
-buttonState = ['0'] * 8
+buttonState = ['0'] * 16
 buttonState = ''.join(buttonState)
 virtual_joystick.data.lButtons = int(buttonState,2)  
 virtual_joystick.update()
@@ -84,7 +84,7 @@ def handle_button_press(data):
     When a button is pressed, the virtual joystick's button state is updated.  
     '''
     # print(data["button"])
-    buttonState = ['0'] * 8
+    buttonState = ['0'] * 16
     buttonState[-int(data["button"])] = '1'
     flipped_binary_string = ''.join(buttonState)
     virtual_joystick.data.lButtons = int(flipped_binary_string,2)  
@@ -96,7 +96,7 @@ def handle_button_release(data):
     '''
     When a button is released, the virtual joystick's button state is updated.
     '''
-    buttonState = ['0'] * 8
+    buttonState = ['0'] * 16
     flipped_binary_string = ''.join(buttonState)
     virtual_joystick.data.lButtons = int(flipped_binary_string,2)  
     virtual_joystick.update()
@@ -128,7 +128,7 @@ def getGamepadConnectionStatus(data):
     virtual_joystick.data.wAxisX = 16383
     virtual_joystick.data.wAxisY = 16383
     
-    buttonState = ['0'] * 8
+    buttonState = ['0'] * 16
     buttonState = ''.join(buttonState)
     virtual_joystick.data.lButtons = int(buttonState,2)  
     virtual_joystick.update()

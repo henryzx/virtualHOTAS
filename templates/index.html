@@ -15,18 +15,22 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.5.0/nouislider.css"
       rel="stylesheet"
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=B612+Mono&display=swap" rel="stylesheet">
     <style>
       body {
         overscroll-behavior-y: contain;
+        font-family: 'B612 Mono', monospace;
       }
       .grid-container {
         display: grid;
-        grid-template-rows: auto 1fr 1fr;
+        grid-template-rows: auto 1fr auto;
         grid-template-columns: 1fr 1fr 1fr 1fr;
         grid-template-areas:
-          "active-pause fullscreen gear-stepper flap-stepper"
+          "engine-start fullscreen gear-stepper flap-stepper"
           "airbrake propeller mixture throttle"
-          "landing-brake propeller mixture trim";
+          "parking-brake active-pause recenter-view trim";
         gap: 10px;
         height: calc(100vh - 20px);
         padding: 10px;
@@ -50,7 +54,9 @@
       .item-gear-stepper { grid-area: gear-stepper; background-color: black; }
       .item-flap-stepper { grid-area: flap-stepper; background-color: black; }
       .item-airbrake { grid-area: airbrake; }
-      .item-landing-brake { grid-area: landing-brake; background-color: black; }
+      .item-engine-start { grid-area: engine-start; }
+      .item-recenter-view { grid-area: recenter-view; }
+      .item-parking-brake { grid-area: parking-brake; background-color: black; }
       .item-propeller { grid-area: propeller; }
       .item-mixture { grid-area: mixture; }
       .item-throttle { grid-area: throttle; }
@@ -76,13 +82,13 @@
 
       /* Trim Wheel Styles */
       .trim-container { width: 100%; height: 100%; overflow: hidden; position: relative; }
-      #trim-display { font-size: 1.5rem; font-weight: bold; color: white; text-align: center; }
+      #trim-display { text-align: center; }
       .trim-viewport { position: relative; width: 100%; height: calc(100% - 30px); overflow: hidden; cursor: grab; touch-action: none; }
       .trim-viewport:active { cursor: grabbing; }
       .trim-ruler { position: absolute; width: 100%; will-change: transform; }
       .trim-tick { position: absolute; left: 50%; transform: translateX(-50%); width: 20px; height: 1px; background-color: #666; }
       .trim-tick.major { width: 40px; background-color: #aaa; height: 2px; }
-      .trim-tick-label { position: absolute; left: 65%; transform: translateY(-50%); font-size: 10px; color: #888; }
+      .trim-tick-label { position: absolute; left: 65%; transform: translateY(-50%); /*font-size: 10px;*/ color: #888; }
       .trim-center-guide { position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background: white; z-index: 10; pointer-events: none; }
 
       /* Toggle Switch Styles */
@@ -138,6 +144,14 @@
       #flap-switch-handle:active {
         background: #eee;
       }
+
+      #parking-brake-handle {
+        background: yellow;
+      }
+
+      #parking-brake-handle:active {
+        background: #dddd00;
+      }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.5.0/nouislider.min.js"></script>
@@ -146,40 +160,48 @@
   <body>
     <div class="grid-container">
       <div class="grid-item item-active-pause">
-        <button class="btn btn-primary button" onpointerdown="buttonPress(5)" onpointerup="buttonRelease(5)">Active Pause</button>
+        <button class="btn btn-primary button" onpointerdown="buttonPress(5)" onpointerup="buttonRelease(5)">ACTIVE PAUSE</button>
       </div>
       <div class="grid-item item-fullscreen">
-        <button class="btn btn-secondary button" onpointerdown="toggleFullscreen()">Full Screen</button>
+        <button class="btn btn-secondary button" onpointerdown="toggleFullscreen()">FULL SCREEN</button>
       </div>
       <div class="grid-item item-gear-stepper">
-        <div>GEAR</div>
+        <div>GEAR UP/DN</div>
         <div class="toggle-switch-container" id="gear-switch-container">
           <div class="toggle-switch"></div>
           <div class="toggle-switch-handle"></div>
         </div>
       </div>
       <div class="grid-item item-flap-stepper">
-        <div>FLAP</div>
+        <div>FLAP UP/DN</div>
         <div class="toggle-switch-container" id="flap-switch-container">
           <div class="toggle-switch"></div>
           <div class="toggle-switch-handle" id="flap-switch-handle"></div>
         </div>
       </div>
 
-      <div class="grid-item item-airbrake"><p>Airbrake</p><div class="slider-container"><div id="airbrakeSlider" class="slider"></div></div></div>
-      <div class="grid-item item-propeller"><p>Propeller</p><div class="slider-container"><div id="propellerSlider" class="slider"></div></div></div>
-      <div class="grid-item item-mixture"><p>Mixture</p><div class="slider-container"><div id="mixtureSlider" class="slider"></div></div></div>
-      <div class="grid-item item-throttle"><p>Throttle</p><div class="slider-container"><div id="throttleSlider" class="slider"></div></div></div>
+      <div class="grid-item item-airbrake"><p>SPD BRK</p><div class="slider-container"><div id="airbrakeSlider" class="slider"></div></div></div>
+      <div class="grid-item item-propeller"><p>PROP</p><div class="slider-container"><div id="propellerSlider" class="slider"></div></div></div>
+      <div class="grid-item item-mixture"><p>MIX</p><div class="slider-container"><div id="mixtureSlider" class="slider"></div></div></div>
+      <div class="grid-item item-throttle"><p>THR</p><div class="slider-container"><div id="throttleSlider" class="slider"></div></div></div>
       
-      <div class="grid-item item-landing-brake">
-        <div>Parking Brake</div>
-        <div class="toggle-switch-container" id="landing-brake-switch-container">
+      <div class="grid-item item-parking-brake">
+        <div>PARK BRK OFF/ON</div>
+        <div class="toggle-switch-container" id="parking-brake-switch-container">
           <div class="toggle-switch"></div>
-          <div class="toggle-switch-handle"></div>
+          <div class="toggle-switch-handle" id="parking-brake-handle"></div>
         </div>
       </div>
 
+      <div class="grid-item item-engine-start">
+        <button class="btn btn-primary button" onpointerdown="buttonPress(8)" onpointerup="buttonRelease(8)">ENG ON/OFF</button>
+      </div>
+      <div class="grid-item item-recenter-view">
+        <button class="btn btn-secondary button" onpointerdown="buttonPress(9)" onpointerup="buttonRelease(9)">RECENTER VIEW</button>
+      </div>
+
       <div class="grid-item item-trim">
+        <div>TRIM</div>
         <div id="trim-display">0%</div>
         <div class="trim-container">
           <div class="trim-viewport" id="trimViewport">
@@ -355,14 +377,12 @@
         handle.style.top = `${centerPos}px`;
 
         const onPointerDown = (e) => {
-          if (e.target === handle) {
-            e.preventDefault();
-            isDragging = true;
-            startY = e.clientY;
-            startTop = handle.offsetTop;
-            handle.style.transition = 'none';
-            container.setPointerCapture(e.pointerId);
-          }
+          e.preventDefault();
+          isDragging = true;
+          startY = e.clientY;
+          startTop = handle.offsetTop;
+          handle.style.transition = 'none';
+          container.setPointerCapture(e.pointerId);
         };
 
         const onPointerMove = (e) => {
@@ -423,14 +443,12 @@
         }
 
         const onPointerDown = (e) => {
-          if (e.target === handle) {
-            e.preventDefault();
-            isDragging = true;
-            startY = e.clientY;
-            startTop = handle.offsetTop;
-            handle.style.transition = 'none';
-            container.setPointerCapture(e.pointerId);
-          }
+          e.preventDefault();
+          isDragging = true;
+          startY = e.clientY;
+          startTop = handle.offsetTop;
+          handle.style.transition = 'none';
+          container.setPointerCapture(e.pointerId);
         };
 
         const onPointerMove = (e) => {
@@ -492,7 +510,7 @@
         initTrimWheel();
         createStatefulSwitch("gear-switch-container", 1, 2, 'down');
         createMomentarySwitch("flap-switch-container", 3, 4);
-        createStatefulSwitch("landing-brake-switch-container", 6, 7, 'down');
+        createStatefulSwitch("parking-brake-switch-container", 6, 7, 'down');
       });
     </script>
   </body>
