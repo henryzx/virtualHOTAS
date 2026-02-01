@@ -26,7 +26,7 @@
         grid-template-areas:
           "active-pause fullscreen gear-stepper flap-stepper"
           "airbrake propeller mixture throttle"
-          "airbrake propeller mixture trim";
+          "landing-brake propeller mixture trim";
         gap: 10px;
         height: calc(100vh - 20px);
         padding: 10px;
@@ -50,6 +50,7 @@
       .item-gear-stepper { grid-area: gear-stepper; background-color: black; }
       .item-flap-stepper { grid-area: flap-stepper; background-color: black; }
       .item-airbrake { grid-area: airbrake; }
+      .item-landing-brake { grid-area: landing-brake; background-color: black; }
       .item-propeller { grid-area: propeller; }
       .item-mixture { grid-area: mixture; }
       .item-throttle { grid-area: throttle; }
@@ -170,6 +171,14 @@
       <div class="grid-item item-mixture"><p>Mixture</p><div class="slider-container"><div id="mixtureSlider" class="slider"></div></div></div>
       <div class="grid-item item-throttle"><p>Throttle</p><div class="slider-container"><div id="throttleSlider" class="slider"></div></div></div>
       
+      <div class="grid-item item-landing-brake">
+        <div>Land Brake</div>
+        <div class="toggle-switch-container" id="landing-brake-switch-container">
+          <div class="toggle-switch"></div>
+          <div class="toggle-switch-handle"></div>
+        </div>
+      </div>
+
       <div class="grid-item item-trim">
         <div id="trim-display">0%</div>
         <div class="trim-container">
@@ -217,8 +226,15 @@
 
         const MIN = -100;
         const MAX = 100;
-        const PX_PER_UNIT = 20; 
-        const FRICTION = 0.95;
+        // PX_PER_UNIT defines how many pixels of drag correspond to a 1% change in trim.
+        // The vJoy range is 0-32700, and the display range is -100% to 100% (200 units).
+        // To map 1 pixel of drag to 1 unit of vJoy change, the sensitivity needs to be adjusted.
+        // Ratio: 32700 / 200 = 163.5 vJoy units per 1% of trim.
+        // We set PX_PER_UNIT to this ratio to achieve a finer, more accurate mapping.
+        const PX_PER_UNIT = 163.5; 
+        // A lower friction value makes the wheel's inertial spin decay faster.
+        // This is adjusted to feel more responsive with the new, more precise scale.
+        const FRICTION = 0.98;
 
         // Start at 0%. Value is derived from currentY. We solve for the currentY that gives value=0.
         // Formula from updateTrim(): value = MAX - ((viewport.offsetHeight / 2 - currentY) / PX_PER_UNIT)
@@ -251,7 +267,7 @@
             let value = MAX - (relativePos / PX_PER_UNIT);
             value = Math.max(MIN, Math.min(MAX, value));
             
-            display.innerText = `${Math.round(value)}%`;
+            display.innerText = `${value.toFixed(1)}%`;
             ruler.style.transform = `translateY(${currentY}px)`;
             
             // Convert -100..100 to 0..32700 for vJoy
@@ -277,13 +293,15 @@
         }
         
         viewport.addEventListener('pointerdown', e => {
+            e.preventDefault();
             isDragging = true;
             velocity = 0;
             lastY = e.clientY;
             cancelAnimationFrame(rafId);
+            viewport.setPointerCapture(e.pointerId);
         });
 
-        window.addEventListener('pointermove', e => {
+        viewport.addEventListener('pointermove', e => {
             if (!isDragging) return;
             const deltaY = e.clientY - lastY;
             velocity = deltaY;
@@ -292,25 +310,23 @@
             updateTrim();
         });
 
-        window.addEventListener('pointerup', () => {
+        viewport.addEventListener('pointerup', (e) => {
             if (!isDragging) return;
             isDragging = false;
+            viewport.releasePointerCapture(e.pointerId);
             rafId = requestAnimationFrame(applyInertia);
+        });
+
+        viewport.addEventListener('pointercancel', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            viewport.releasePointerCapture(e.pointerId);
         });
 
         updateTrim();
       }
 
       // Toggle Switch Logic
-      function createToggleSwitch(containerId, upButton, downButton, options = {}) {
-        const { isStateful = false, initialState = 'center' } = options;
-        
-        if (isStateful) {
-          createStatefulSwitch(containerId, upButton, downButton, initialState);
-        } else {
-          createMomentarySwitch(containerId, upButton, downButton);
-        }
-      }
 
       function createMomentarySwitch(containerId, upButton, downButton) {
         const container = document.getElementById(containerId);
@@ -427,6 +443,7 @@
             if (currentState !== 'up') {
               console.log('Trigger UP');
               buttonPress(upButton);
+              setTimeout(() => buttonRelease(upButton), 150);
               currentState = 'up';
             }
             handle.style.top = `${maxUp}px`;
@@ -434,6 +451,7 @@
             if (currentState !== 'down') {
               console.log('Trigger DOWN');
               buttonPress(downButton);
+              setTimeout(() => buttonRelease(downButton), 150);
               currentState = 'down';
             }
             handle.style.top = `${maxDown}px`;
@@ -460,8 +478,9 @@
         createSlider("mixtureSlider", "red", "z", 32700);
         createSlider("throttleSlider", "black", "slider1", 0);
         initTrimWheel();
-        createToggleSwitch("gear-switch-container", 1, 2, { isStateful: true, initialState: 'down' });
-        createToggleSwitch("flap-switch-container", 3, 4, { isStateful: false });
+        createStatefulSwitch("gear-switch-container", 1, 2, 'down');
+        createMomentarySwitch("flap-switch-container", 3, 4);
+        createStatefulSwitch("landing-brake-switch-container", 6, 7, 'down');
       });
     </script>
   </body>
