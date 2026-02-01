@@ -184,10 +184,10 @@
     <script>
       const socket = io.connect("http://" + document.domain + ":" + location.port);
 
-      function createSlider(id, color, axisName) {
+      function createSlider(id, color, axisName, startValue = 0) {
         const slider = document.getElementById(id);
         noUiSlider.create(slider, {
-          start: 0,
+          start: startValue,
           orientation: "vertical",
           direction: "rtl",
           range: { min: 0, max: 32700 },
@@ -220,7 +220,11 @@
         const PX_PER_UNIT = 20; 
         const FRICTION = 0.95;
 
-        let currentY = -((MAX - MIN) / 2) * PX_PER_UNIT; 
+        // Start at 0%. Value is derived from currentY. We solve for the currentY that gives value=0.
+        // Formula from updateTrim(): value = MAX - ((viewport.offsetHeight / 2 - currentY) / PX_PER_UNIT)
+        // For value=0: 0 = MAX - ((viewport.offsetHeight / 2 - currentY) / PX_PER_UNIT)
+        // Solving for currentY gives:
+        let currentY = (viewport.offsetHeight / 2) - (MAX * PX_PER_UNIT); 
         let isDragging = false;
         let lastY = 0;
         let velocity = 0;
@@ -451,10 +455,10 @@
       }
 
       document.addEventListener("DOMContentLoaded", function () {
-        createSlider("airbrakeSlider", "white", "x");
-        createSlider("propellerSlider", "blue", "y");
-        createSlider("mixtureSlider", "red", "z");
-        createSlider("throttleSlider", "black", "slider1");
+        createSlider("airbrakeSlider", "white", "x", 32700);
+        createSlider("propellerSlider", "blue", "y", 32700);
+        createSlider("mixtureSlider", "red", "z", 32700);
+        createSlider("throttleSlider", "black", "slider1", 0);
         initTrimWheel();
         createToggleSwitch("gear-switch-container", 1, 2, { isStateful: true, initialState: 'down' });
         createToggleSwitch("flap-switch-container", 3, 4, { isStateful: false });
