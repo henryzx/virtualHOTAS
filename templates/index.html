@@ -94,6 +94,9 @@
         cursor: pointer;
         border: 2px solid #555; /* Added a border */
         box-shadow: inset 0 0 10px rgba(0,0,0,0.5); /* Inner shadow for depth */
+        touch-action: none; /* Prevent default touch behaviors */
+        user-select: none; /* Prevent text selection */
+        -webkit-user-select: none; /* Safari */
       }
 
       .toggle-switch {
@@ -115,7 +118,7 @@
         position: absolute;
         left: 50%;
         transform: translateX(-50%);
-        top: calc(50% - 20px); /* Centered initial position */
+        top: 40px; /* Centered initial position */
         cursor: grab;
         border: 1px solid #666;
         box-shadow: 0 5px 10px rgba(0,0,0,0.3);
@@ -125,6 +128,14 @@
       .toggle-switch-handle:active {
         cursor: grabbing;
         background: linear-gradient(145deg, #444, #222); /* Darken when grabbed */
+      }
+
+      #flap-switch-handle {
+        background: white;
+      }
+
+      #flap-switch-handle:active {
+        background: #eee;
       }
     </style>
 
@@ -142,17 +153,15 @@
       <div class="grid-item item-gear-stepper">
         <div>GEAR</div>
         <div class="toggle-switch-container" id="gear-switch-container">
-          <div class="toggle-switch">
-            <div class="toggle-switch-handle"></div>
-          </div>
+          <div class="toggle-switch"></div>
+          <div class="toggle-switch-handle"></div>
         </div>
       </div>
       <div class="grid-item item-flap-stepper">
         <div>FLAP</div>
         <div class="toggle-switch-container" id="flap-switch-container">
-          <div class="toggle-switch">
-            <div class="toggle-switch-handle"></div>
-          </div>
+          <div class="toggle-switch"></div>
+          <div class="toggle-switch-handle" id="flap-switch-handle"></div>
         </div>
       </div>
 
@@ -307,16 +316,15 @@
         let startY = 0;
         let startTop = 0;
 
-        const handleHeight = handle.offsetHeight;
-        const containerHeight = container.offsetHeight;
-        const centerPos = (containerHeight / 2) - (handleHeight / 2);
+        const centerPos = 40;
         const maxUp = 10;
-        const maxDown = containerHeight - handleHeight - 10;
+        const maxDown = 70;
 
         handle.style.top = `${centerPos}px`;
 
         const onPointerDown = (e) => {
           if (e.target === handle) {
+            e.preventDefault();
             isDragging = true;
             startY = e.clientY;
             startTop = handle.offsetTop;
@@ -347,17 +355,12 @@
             console.log('Trigger UP');
             buttonPress(upButton);
             setTimeout(() => buttonRelease(upButton), 150);
-            handle.style.top = `${maxUp}px`;
-            setTimeout(() => { handle.style.top = `${centerPos}px`; }, 100);
           } else if (currentTop > lowerThreshold) {
             console.log('Trigger DOWN');
             buttonPress(downButton);
             setTimeout(() => buttonRelease(downButton), 150);
-            handle.style.top = `${maxDown}px`;
-            setTimeout(() => { handle.style.top = `${centerPos}px`; }, 100);
-          } else {
-            handle.style.top = `${centerPos}px`;
           }
+          handle.style.top = `${centerPos}px`;
         };
 
         container.addEventListener('pointerdown', onPointerDown);
@@ -375,11 +378,9 @@
         let startTop = 0;
         let currentState = initialState;
 
-        const handleHeight = handle.offsetHeight;
-        const containerHeight = container.offsetHeight;
-        const centerPos = (containerHeight / 2) - (handleHeight / 2);
+        const centerPos = 40;
         const maxUp = 10;
-        const maxDown = containerHeight - handleHeight - 10;
+        const maxDown = 70;
 
         if (initialState === 'up') {
             handle.style.top = `${maxUp}px`;
@@ -391,6 +392,7 @@
 
         const onPointerDown = (e) => {
           if (e.target === handle) {
+            e.preventDefault();
             isDragging = true;
             startY = e.clientY;
             startTop = handle.offsetTop;
