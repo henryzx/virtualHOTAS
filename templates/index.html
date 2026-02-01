@@ -245,6 +245,7 @@
         let lastY = 0;
         let velocity = 0;
         let rafId = null;
+        let movementTimeout = null;
 
         for (let i = MIN; i <= MAX; i++) {
             const yPos = (MAX - i) * PX_PER_UNIT;
@@ -298,21 +299,30 @@
             velocity = 0;
             lastY = e.clientY;
             cancelAnimationFrame(rafId);
+            if (movementTimeout) clearTimeout(movementTimeout);
             viewport.setPointerCapture(e.pointerId);
         });
 
         viewport.addEventListener('pointermove', e => {
             if (!isDragging) return;
+            if (movementTimeout) clearTimeout(movementTimeout);
+
             const deltaY = e.clientY - lastY;
-            velocity = deltaY;
+            velocity = deltaY; // Velocity is the last movement delta
             currentY += deltaY;
             lastY = e.clientY;
             updateTrim();
+
+            // If no move events happen for 100ms, reset velocity to 0
+            movementTimeout = setTimeout(() => {
+                velocity = 0;
+            }, 100);
         });
 
         viewport.addEventListener('pointerup', (e) => {
             if (!isDragging) return;
             isDragging = false;
+            if (movementTimeout) clearTimeout(movementTimeout);
             viewport.releasePointerCapture(e.pointerId);
             rafId = requestAnimationFrame(applyInertia);
         });
@@ -320,6 +330,8 @@
         viewport.addEventListener('pointercancel', (e) => {
             if (!isDragging) return;
             isDragging = false;
+            if (movementTimeout) clearTimeout(movementTimeout);
+            velocity = 0; // Explicitly stop velocity on cancel
             viewport.releasePointerCapture(e.pointerId);
         });
 
