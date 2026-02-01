@@ -17,20 +17,18 @@ gamepadStatus = False
 buttonState =  ['0']*8
 
 
-def setup():
-    '''
-    This will always connect to VJoyDevice: 1. 
-    Open to vJoyConf - Configure vJoy Devices to change the number of axes and buttons.
-    '''
-    global virtual_joystick
-    virtual_joystick = VJoyDevice(1)
-    virtual_joystick.data.wAxisX = 16383
-    virtual_joystick.data.wAxisY = 16383
-    
-    buttonState = ['0'] * 8
-    buttonState = ''.join(buttonState)
-    virtual_joystick.data.lButtons = int(buttonState,2)  
-    virtual_joystick.update()
+'''
+This will always connect to VJoyDevice: 1. 
+Open to vJoyConf - Configure vJoy Devices to change the number of axes and buttons.
+'''
+virtual_joystick = VJoyDevice(1)
+virtual_joystick.data.wAxisX = 16383
+virtual_joystick.data.wAxisY = 16383
+
+buttonState = ['0'] * 8
+buttonState = ''.join(buttonState)
+virtual_joystick.data.lButtons = int(buttonState,2)  
+virtual_joystick.update()
 
 def map_value(value, in_min, in_max, out_min, out_max):
     '''
@@ -55,7 +53,6 @@ def index():
     '''
     This is the main page of the application.
     '''
-    setup()
     return render_template('index.html')
     
 
@@ -95,7 +92,7 @@ def handle_button_press(data):
 
     
 @socketio.on('button_release')
-def handle_button_press(data):
+def handle_button_release(data):
     '''
     When a button is released, the virtual joystick's button state is updated.
     '''
