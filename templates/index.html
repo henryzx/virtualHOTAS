@@ -289,7 +289,17 @@
       }
 
       // Toggle Switch Logic
-      function createToggleSwitch(containerId, upButton, downButton) {
+      function createToggleSwitch(containerId, upButton, downButton, options = {}) {
+        const { isStateful = false, initialState = 'center' } = options;
+        
+        if (isStateful) {
+          createStatefulSwitch(containerId, upButton, downButton, initialState);
+        } else {
+          createMomentarySwitch(containerId, upButton, downButton);
+        }
+      }
+
+      function createMomentarySwitch(containerId, upButton, downButton) {
         const container = document.getElementById(containerId);
         const handle = container.querySelector(".toggle-switch-handle");
 
@@ -303,7 +313,6 @@
         const maxUp = 10;
         const maxDown = containerHeight - handleHeight - 10;
 
-        // Initialize handle position
         handle.style.top = `${centerPos}px`;
 
         const onPointerDown = (e) => {
@@ -311,7 +320,7 @@
             isDragging = true;
             startY = e.clientY;
             startTop = handle.offsetTop;
-            handle.style.transition = 'none'; // Disable transition while dragging
+            handle.style.transition = 'none';
             container.setPointerCapture(e.pointerId);
           }
         };
@@ -320,8 +329,6 @@
           if (!isDragging) return;
           const deltaY = e.clientY - startY;
           let newTop = startTop + deltaY;
-
-          // Clamp the position within the defined limits
           newTop = Math.max(maxUp, Math.min(newTop, maxDown));
           handle.style.top = `${newTop}px`;
         };
@@ -330,42 +337,115 @@
           if (!isDragging) return;
           isDragging = false;
           container.releasePointerCapture(e.pointerId);
-          handle.style.transition = 'top 0.2s ease-out'; // Re-enable for snap back
+          handle.style.transition = 'top 0.2s ease-out';
 
           const currentTop = handle.offsetTop;
           const upperThreshold = centerPos - 20;
           const lowerThreshold = centerPos + 20;
 
           if (currentTop < upperThreshold) {
-            // Trigger UP action
             console.log('Trigger UP');
             buttonPress(upButton);
             setTimeout(() => buttonRelease(upButton), 150);
-            // Animate snap back to center
             handle.style.top = `${maxUp}px`;
-            setTimeout(() => {
-                handle.style.top = `${centerPos}px`;
-            }, 100);
+            setTimeout(() => { handle.style.top = `${centerPos}px`; }, 100);
           } else if (currentTop > lowerThreshold) {
-            // Trigger DOWN action
             console.log('Trigger DOWN');
             buttonPress(downButton);
             setTimeout(() => buttonRelease(downButton), 150);
-            // Animate snap back to center
             handle.style.top = `${maxDown}px`;
-             setTimeout(() => {
-                handle.style.top = `${centerPos}px`;
-            }, 100);
+            setTimeout(() => { handle.style.top = `${centerPos}px`; }, 100);
           } else {
-            // Reset to center if not moved far enough
             handle.style.top = `${centerPos}px`;
           }
         };
-        
+
         container.addEventListener('pointerdown', onPointerDown);
         container.addEventListener('pointermove', onPointerMove);
         container.addEventListener('pointerup', onPointerUp);
-        container.addEventListener('pointercancel', onPointerUp); // Handle cases like pointer leaving the screen
+        container.addEventListener('pointercancel', onPointerUp);
+      }
+
+      function createStatefulSwitch(containerId, upButton, downButton, initialState) {
+        const container = document.getElementById(containerId);
+        const handle = container.querySelector(".toggle-switch-handle");
+
+        let isDragging = false;
+        let startY = 0;
+        let startTop = 0;
+        let currentState = initialState;
+
+        const handleHeight = handle.offsetHeight;
+        const containerHeight = container.offsetHeight;
+        const centerPos = (containerHeight / 2) - (handleHeight / 2);
+        const maxUp = 10;
+        const maxDown = containerHeight - handleHeight - 10;
+
+        if (initialState === 'up') {
+            handle.style.top = `${maxUp}px`;
+        } else if (initialState === 'down') {
+            handle.style.top = `${maxDown}px`;
+        } else {
+            handle.style.top = `${centerPos}px`;
+        }
+
+        const onPointerDown = (e) => {
+          if (e.target === handle) {
+            isDragging = true;
+            startY = e.clientY;
+            startTop = handle.offsetTop;
+            handle.style.transition = 'none';
+            container.setPointerCapture(e.pointerId);
+          }
+        };
+
+        const onPointerMove = (e) => {
+          if (!isDragging) return;
+          const deltaY = e.clientY - startY;
+          let newTop = startTop + deltaY;
+          newTop = Math.max(maxUp, Math.min(newTop, maxDown));
+          handle.style.top = `${newTop}px`;
+        };
+
+        const onPointerUp = (e) => {
+          if (!isDragging) return;
+          isDragging = false;
+          container.releasePointerCapture(e.pointerId);
+          handle.style.transition = 'top 0.2s ease-out';
+
+          const currentTop = handle.offsetTop;
+          const upperThreshold = centerPos - 20;
+          const lowerThreshold = centerPos + 20;
+
+          if (currentTop < upperThreshold) {
+            if (currentState !== 'up') {
+              console.log('Trigger UP');
+              buttonPress(upButton);
+              currentState = 'up';
+            }
+            handle.style.top = `${maxUp}px`;
+          } else if (currentTop > lowerThreshold) {
+            if (currentState !== 'down') {
+              console.log('Trigger DOWN');
+              buttonPress(downButton);
+              currentState = 'down';
+            }
+            handle.style.top = `${maxDown}px`;
+          } else {
+            if (currentState === 'up') {
+              handle.style.top = `${maxUp}px`;
+            } else if (currentState === 'down') {
+              handle.style.top = `${maxDown}px`;
+            } else {
+              handle.style.top = `${centerPos}px`;
+            }
+          }
+        };
+
+        container.addEventListener('pointerdown', onPointerDown);
+        container.addEventListener('pointermove', onPointerMove);
+        container.addEventListener('pointerup', onPointerUp);
+        container.addEventListener('pointercancel', onPointerUp);
       }
 
       document.addEventListener("DOMContentLoaded", function () {
@@ -374,8 +454,8 @@
         createSlider("mixtureSlider", "red", "z");
         createSlider("throttleSlider", "black", "slider1");
         initTrimWheel();
-        createToggleSwitch("gear-switch-container", 1, 2);
-        createToggleSwitch("flap-switch-container", 3, 4);
+        createToggleSwitch("gear-switch-container", 1, 2, { isStateful: true, initialState: 'down' });
+        createToggleSwitch("flap-switch-container", 3, 4, { isStateful: false });
       });
     </script>
   </body>
